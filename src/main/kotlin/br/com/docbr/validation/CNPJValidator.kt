@@ -1,18 +1,37 @@
 package br.com.docbr.validation
 
+import br.com.docbr.exceptions.InvalidCNPJCheckDigitException
+import br.com.docbr.exceptions.InvalidCNPJException
+import br.com.docbr.exceptions.InvalidCNPJFormatException
 import br.com.docbr.pojo.CNPJ
+import kotlin.jvm.Throws
 
-object CnpjInspector {
+object CNPJValidator {
 
     val documentPattern: Regex = Regex("([0-9A-Z]{12})([0-9]{2})")
 
     fun isCNPJValid(value: CNPJ): Boolean {
-        return isEntryValid(value.document) && isCheckDigitValid(value.document)
+        return try {
+            isEntryValid(value.document) && isCheckDigitValid(value.document)
+        } catch (_: Exception) {
+            false
+        }
     }
 
     fun isCNPJValid(value: String): Boolean {
-        val document = CNPJ(value).document
-        return isEntryValid(document) && isCheckDigitValid(document)
+        val document = CNPJ(value)
+        return isCNPJValid(document)
+    }
+
+    @Throws(InvalidCNPJException::class)
+    fun validate(value: CNPJ) {
+        isEntryValid(value.document) && isCheckDigitValid(value.document)
+    }
+
+    @Throws(InvalidCNPJException::class)
+    fun validate(value: String) {
+        val document = CNPJ(value)
+        validate(document)
     }
 
     /**
@@ -27,7 +46,7 @@ object CnpjInspector {
      */
     fun isEntryValid(document: String): Boolean {
         val patternMatches = documentPattern.matches(document)
-        if (!patternMatches) { throw Exception("Invalid CNPJ") }
+        if (!patternMatches) { throw InvalidCNPJFormatException() }
         return true
     }
 
@@ -38,7 +57,7 @@ object CnpjInspector {
     fun isCheckDigitValid(document: String): Boolean {
         val dv = document.substring(document.length - 2 .. document.length - 1)
         val baseDoc = document.substring(0 .. document.length - 3)
-        if (dv != calcCheckDigit(baseDoc)) throw Exception("Invalid Verifier Digit")
+        if (dv != calcCheckDigit(baseDoc)) { throw InvalidCNPJCheckDigitException() }
         return true
     }
 
